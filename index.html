@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Naxas</title>
+
+<style>
+    body {
+        font-family: Poppins, sans-serif;
+        background: #0b0f17;
+        color: white;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 430px;
+        padding: 15px;
+    }
+
+    .title {
+        text-align: center;
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #00ffaa;
+        text-shadow: 0 0 10px #00ffaa;
+    }
+
+    .product {
+        background: #141a25;
+        border: 2px solid transparent;
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        transition: 0.25s;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .product.active {
+        border-color: #00ffaa;
+        box-shadow: 0 0 15px #00ffaa55;
+    }
+
+    .product-info {
+        max-width: 65%;
+    }
+
+    .product-title { font-size: 14px; font-weight: 600; }
+    .product-price { font-size: 13px; margin-top: 4px; color: #aaa; }
+
+    .right-box { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+    .qty-control {
+        display: none;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-circle {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-size: 15px;
+        font-weight: bold;
+        border: none;
+        background: #00ffaa;
+        color: black;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .qty-number {
+        min-width: 22px;
+        text-align: center;
+        font-size: 15px;
+        font-weight: bold;
+    }
+
+    .batal-btn {
+        display: none;
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid #ff4d6a;
+        background: transparent;
+        color: #ff4d6a;
+        cursor: pointer;
+    }
+
+    select {
+        width: 100%;
+        background: #141a25;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px;
+        margin-top: 8px;
+        font-size: 14px;
+    }
+
+    .total {
+        margin-top: 15px;
+        padding: 15px;
+        background: #10211f;
+        border-radius: 12px;
+        font-size: 18px;
+        text-align: center;
+        border: 2px solid #00ffaa;
+    }
+
+    button.send-wa {
+        width: 100%;
+        margin-top: 15px;
+        background: #00ffaa;
+        color: black;
+        border: none;
+        padding: 15px;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 0 12px #00ffaa;
+    }
+
+    button.send-wa:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="title">📌 Market Naxas</div>
+    <div id="productList"></div>
+
+    <label style="margin-top:15px;">Metode Pembayaran</label>
+    <select id="payment">
+        <option disabled selected>Pilih metode...</option>
+        <option>Dana</option><option>OVO</option><option>GoPay</option>
+        <option>ShopeePay</option><option>Transfer Bank</option>
+    </select>
+
+    <div class="total">Total: <span id="totalHarga">Rp 0</span></div>
+    <button class="send-wa" onclick="kirimWA()">Kirim WhatsApp</button>
+</div>
+
+<script>
+const nomorWA = "6281809730331";
+const products = [
+    ["CapCut Pro Private 35 hari", 17000],["CapCut Pro Private 21 hari", 12000],
+    ["Spotify Premium 1 bulan", 17000],["Spotify Premium 2 bulan", 31000],
+    ["Alight Motion Premium 1 tahun", 8000],["YouTube + YT Music 1 bulan", 6000],
+    ["Canva Pro via Invite 1 bulan", 5000],["Viu Premium 1 tahun", 6000],
+    ["Bstation Premium Sharing 1 tahun", 12000],["PicsArt Pro 1 bulan", 5000],
+    ["Apple Music 1 bulan", 5000],["AI Gemini 1 bulan", 6000],
+    ["Duolingo Super 7 hari", 4000],["ChatGPT Plus 1 bulan", 10000],
+    ["ChatGPT Plus bisa invite 5 member", 16000],["ChatGPT Go 1 tahun", 12000]
+];
+
+let selected = [];
+const listContainer = document.getElementById("productList");
+
+products.forEach((item, i) => {
+    listContainer.innerHTML += `
+        <div class="product" data-index="${i}">
+            <div class="product-info">
+                <div class="product-title">${item[0]}</div>
+                <div class="product-price">Rp ${item[1].toLocaleString()}</div>
+            </div>
+            <div class="right-box">
+                <div class="qty-control" id="qtyBox${i}">
+                    <button class="btn-circle" onclick="updateQty(event, ${i}, -1)">&lt;</button>
+                    <span id="qty${i}" class="qty-number">1</span>
+                    <button class="btn-circle" onclick="updateQty(event, ${i}, 1)">&gt;</button>
+                </div>
+                <button class="batal-btn" id="btnBatal${i}" onclick="cancelProduct(event, ${i})">Batal</button>
+            </div>
+        </div>
+    `;
+});
+
+document.querySelectorAll(".product").forEach(card => {
+    card.addEventListener("click", () => {
+        const idx = parseInt(card.dataset.index);
+        if (!selected.includes(idx)) {
+            selected.push(idx);
+            card.classList.add("active");
+            document.getElementById("qtyBox"+idx).style.display = "flex";
+            document.getElementById("btnBatal"+idx).style.display = "block";
+            hitungTotal();
+        }
+    });
+});
+
+function updateQty(event, index, change){
+    event.stopPropagation();
+    const qtyTag = document.getElementById("qty"+index);
+    let qty = parseInt(qtyTag.innerText) + change;
+    if (qty < 1) qty = 1;
+    qtyTag.innerText = qty;
+    hitungTotal();
+}
+
+function cancelProduct(event, index){
+    event.stopPropagation();
+    selected = selected.filter(x => x !== index);
+
+    document.querySelector(`.product[data-index="${index}"]`).classList.remove("active");
+    document.getElementById("qtyBox"+index).style.display = "none";
+    document.getElementById("btnBatal"+index).style.display = "none";
+    document.getElementById("qty"+index).innerText = "1";
+    
+    hitungTotal();
+}
+
+function hitungTotal(){
+    let total = 0;
+    selected.forEach(i=>{
+        total += products[i][1] * parseInt(document.getElementById("qty"+i).innerText);
+    });
+    document.getElementById("totalHarga").innerText = "Rp " + total.toLocaleString();
+}
+
+function kirimWA(){
+    const pay = document.getElementById("payment").value;
+    if(!pay) return alert("Pilih metode pembayaran terlebih dahulu!");
+    if(selected.length === 0) return alert("Belum ada pesanan!");
+
+    let pesan = `pesanan market naxas%0A%0A`;
+    selected.forEach(i=>{
+        let qty = document.getElementById("qty"+i).innerText;
+        pesan += `• ${products[i][0]} x${qty} (Rp ${(products[i][1] * qty).toLocaleString()})%0A`;
+    });
+
+    pesan += `%0AMetode Pembayaran: ${pay}%0ATotal: ${document.getElementById("totalHarga").innerText}%0A%0ATerima kasih 🙏`;
+
+    window.open(`https://wa.me/${nomorWA}?text=${pesan}`, "_blank");
+}
+</script>
+
+</body>
+</html>
